@@ -1,4 +1,4 @@
-This is a new Personal Hebrew Dictionary project.
+This is a new Personal Dictionary project.
 
 # Getting Started
 
