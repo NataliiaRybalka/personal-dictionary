@@ -145,6 +145,36 @@ export async function allWords(): Promise<Word[]> {
 	return rows as Word[];
 }
 
+const UPDATE_WORD = `UPDATE OR IGNORE words
+	SET word = ?, transliteration = ?, translation = ?, search_text = ?
+	WHERE id = ?`;
+
+export type UpdateResult = { updated: true } | { updated: false; reason: "duplicate" | "missing" };
+
+/**
+ * Rewrites one word in place, leaving created_at alone so an edit keeps the word's spot in
+ * the sort order. OR IGNORE lets the UNIQUE index reject a change that would collide with
+ * another row instead of throwing, the same way addWord relies on it — which is why the
+ * zero-row outcome needs one extra read to tell "already stored" from "no longer there".
+ */
+export async function updateWord(id: number, input: NewWord): Promise<UpdateResult> {
+	const value = normalize(input);
+	const db = await getDb();
+	const result = await db.execute(UPDATE_WORD, [
+		value.word,
+		value.transliteration,
+		value.translation,
+		value.searchText,
+		id,
+	]);
+
+	if (result.rowsAffected > 0) return { updated: true };
+
+	const { rows } = await db.execute("SELECT 1 FROM words WHERE id = ?", [id]);
+
+	return { updated: false, reason: rows.length > 0 ? "duplicate" : "missing" };
+}
+
 export async function deleteWord(id: number): Promise<void> {
 	const db = await getDb();
 	await db.execute("DELETE FROM words WHERE id = ?", [id]);

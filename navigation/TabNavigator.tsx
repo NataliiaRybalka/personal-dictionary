@@ -12,9 +12,10 @@ import i18n from "../i18n";
 import SaveWord from "../screens/SaveWord";
 import List from "../screens/List";
 import { FONT_FAMILY } from "../constants/Fonts";
+import type { TabParamList } from "./types";
 
 
-const Tab = createBottomTabNavigator();
+const Tab = createBottomTabNavigator<TabParamList>();
 
 export default function TabNavigator() {
 	const [language, setLanguage] = useState("");

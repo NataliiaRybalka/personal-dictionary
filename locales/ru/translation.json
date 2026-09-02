@@ -21,5 +21,8 @@
     "Could not save the word. Please try again.": "Не удалось сохранить слово. Попробуйте снова.",
     "Delete": "Удалить",
     "Are you sure?": "Вы уверены?",
-    "Edit": "Редактировать"
+    "Edit": "Редактировать",
+    "Cancel": "Отмена",
+    "Could not delete the word. Please try again.": "Не удалось удалить слово. Попробуйте снова.",
+    "That word is no longer in your dictionary.": "Этого слова больше нет в вашем словаре."
 }

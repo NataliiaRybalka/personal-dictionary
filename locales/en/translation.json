@@ -21,5 +21,8 @@
     "Could not save the word. Please try again.": "Could not save the word. Please try again.",
     "Delete": "Delete",
     "Are you sure?": "Are you sure?",
-    "Edit": "Edit"
+    "Edit": "Edit",
+    "Cancel": "Cancel",
+    "Could not delete the word. Please try again.": "Could not delete the word. Please try again.",
+    "That word is no longer in your dictionary.": "That word is no longer in your dictionary."
 }

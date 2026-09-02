@@ -1,18 +1,22 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, ScrollView, RefreshControl, useWindowDimensions, TextInput, Pressable, Alert } from "react-native";
 import { useTranslation } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Share from "react-native-share";
 import { errorCodes, isErrorWithCode, pick, types } from "@react-native-documents/picker";
+import { useFocusEffect, useNavigation } from "@react-navigation/native";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 
 import { Colors } from "../constants/Colors";
-import { addWords, allWords, listWords, SortOrder, Word } from "../db/words";
+import { addWords, allWords, deleteWord, listWords, SortOrder, Word } from "../db/words";
 import { ThemedView } from "../components/ThemedView";
 import { ThemedText } from "../components/ThemedText";
 import SortSelect from "../components/SortSelect";
+import WordActions from "../components/WordActions";
 import { FONT_FAMILY } from "../constants/Fonts";
 import { CsvFormatError, csvToWords, wordsToCsv } from "../utils/csv";
 import { utf8ToBase64 } from "../utils/base64";
+import type { TabParamList } from "../navigation/types";
 
 
 const SEARCH_DEBOUNCE_MS = 250;
@@ -27,6 +31,7 @@ function isSortOrder(value: string | null): value is SortOrder {
 export default function List() {
 	const { t } = useTranslation();
 	const { width, height } = useWindowDimensions();
+	const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
 
 	const isLandscape = width > height;
 	const screenWidth = isLandscape ? { width: Math.min(width * 0.94) } : null;
@@ -37,6 +42,7 @@ export default function List() {
 	const [list, setList] = useState<Word[]>([]);
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SortOrder | null>(null);
+	const [selected, setSelected] = useState<Word | null>(null);
 
 	const term = search.trim();
 	const activeSort = sort ?? DEFAULT_SORT;
@@ -77,6 +83,22 @@ export default function List() {
 		};
 	}, [term, getList]);
 
+	// The other tab saves words into the same table while this screen stays mounted, so an
+	// edit or a new word would otherwise only show up after a pull-to-refresh. Held in a ref
+	// rather than listed as a dependency: getList is rebuilt on every debounced search term,
+	// and a focus effect keyed on it would fire an extra undebounced query per keystroke.
+	const reload = useRef(getList);
+
+	useEffect(() => {
+		reload.current = getList;
+	}, [getList]);
+
+	useFocusEffect(
+		useCallback(() => {
+			reload.current();
+		}, []),
+	);
+
 	const onRefresh = async () => {
 		setRefreshing(true);
 		await getList();
@@ -89,6 +111,37 @@ export default function List() {
 		AsyncStorage.setItem(SORT_STORAGE_KEY, next).catch((error) =>
 			console.error("Failed to save the sort order", error),
 		);
+	};
+
+	const removeWord = async (id: number) => {
+		try {
+			await deleteWord(id);
+			await getList();
+		} catch (error) {
+			console.error("Failed to delete the word", error);
+			Alert.alert(t("Could not delete the word. Please try again."));
+		}
+	};
+
+	/** Close first, then ask: an Alert raised over an open Modal can end up behind it. */
+	const onDelete = (word: Word) => {
+		setSelected(null);
+		Alert.alert(t("Are you sure?"), word.word, [
+			{ text: t("Cancel"), style: "cancel" },
+			{ text: t("Delete"), style: "destructive", onPress: () => removeWord(word.id) },
+		]);
+	};
+
+	const onEdit = (word: Word) => {
+		setSelected(null);
+		navigation.navigate("explore", {
+			edit: {
+				id: word.id,
+				word: word.word,
+				transliteration: word.transliteration,
+				translation: word.translation,
+			},
+		});
 	};
 
     const exportList = async () => {
@@ -204,15 +257,26 @@ export default function List() {
 				</ThemedView>
 
 				{list.map((word) => (
-					<ThemedView key={word.id} style={styles.row}>
+					<Pressable
+						key={word.id}
+						style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+						onLongPress={() => setSelected(word)}
+					>
 						<ThemedText style={styles.cell}>{word.translation}</ThemedText>
 						<ThemedText style={[styles.cell, styles.middleCell]}>
 							{word.transliteration}
 						</ThemedText>
 						<ThemedText style={styles.cell}>{word.word}</ThemedText>
-					</ThemedView>
+					</Pressable>
 				))}
 			</ThemedView>
+
+			<WordActions
+				word={selected}
+				onDelete={onDelete}
+				onEdit={onEdit}
+				onClose={() => setSelected(null)}
+			/>
 		</ScrollView>
 	);
 }
@@ -295,6 +359,10 @@ const styles = StyleSheet.create({
 		backgroundColor: "transparent",
 		borderBottomWidth: StyleSheet.hairlineWidth,
 		borderBottomColor: "#c0c4c8",
+	},
+	/** The only hint that a row does something — a long press opens the Delete / Edit sheet. */
+	rowPressed: {
+		backgroundColor: "#eceff1",
 	},
 	headerRow: {
 		backgroundColor: "#cfd4d8",
