@@ -1,5 +1,5 @@
 {
-    "Word List" : "Список слов",
+    "Word List": "Список слов",
     "New word": "Новое слово",
     "Word": "Слово",
     "Transliteration": "Транслитерация",
@@ -7,5 +7,9 @@
     "Export": "Экспорт",
     "Import": "Импорт",
     "old": "старое",
-    "new": "новое"
+    "new": "новое",
+    "Save": "Сохранить",
+    "The \"Word\" and \"Translation\" fields are required.": "Поля \"Слово\" и \"Перевод\" обязательны.",
+    "This word is already in your dictionary.": "Это слово уже есть в вашем словаре.",
+    "Could not save the word. Please try again.": "Не удалось сохранить слово. Попробуйте снова."
 }

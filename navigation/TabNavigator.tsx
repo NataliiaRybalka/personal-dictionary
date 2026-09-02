@@ -9,9 +9,9 @@ import TabBarBackground from "../components/ui/TabBarBackground";
 import { Colors } from "../constants/Colors";
 import ModalWindow from "../components/Modal";
 import i18n from "../i18n";
-
 import SaveWord from "../screens/SaveWord";
 import List from "../screens/List";
+import { FONT_FAMILY } from "../constants/Fonts";
 
 
 const Tab = createBottomTabNavigator();
@@ -41,7 +41,7 @@ export default function TabNavigator() {
 			screenOptions={{
 				tabBarActiveTintColor: Colors.tint,
 				tabBarLabelStyle: {
-                    fontFamily: "Open Sans",
+                    fontFamily: FONT_FAMILY,
 					fontSize: 14,
 				},
 				headerShown: false,
@@ -68,9 +68,7 @@ export default function TabNavigator() {
 					setModalVisible={setModalVisible}
 					setLanguage={setLanguage}
 				/>
-				: <List
-					language={language}
-				/>}
+				: <List />}
 			</Tab.Screen>
 			<Tab.Screen
 				name="explore"
@@ -79,7 +77,7 @@ export default function TabNavigator() {
 					tabBarIcon: () => <Feather name="edit" size={24} color="black" />,
 				}}
 			>
-				{() => <SaveWord language={language} />}
+				{() => <SaveWord />}
 			</Tab.Screen>
 		</Tab.Navigator>
 	);

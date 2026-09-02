@@ -1,20 +1,72 @@
-import { PropsWithChildren, useState } from "react";
-import { StyleSheet, ScrollView, RefreshControl } from "react-native";
+import { useState } from "react";
+import { StyleSheet, ScrollView, RefreshControl, TextInput, Pressable, Alert } from "react-native";
 import { useTranslation } from "react-i18next";
 
+import { ThemedView } from "../components/ThemedView";
+import { ThemedText } from "../components/ThemedText";
+import { FONT_FAMILY } from "../constants/Fonts";
+import { Colors } from "../constants/Colors";
+import { addWord } from "../db/words";
 
-type Props = PropsWithChildren<{
-	language: string;
-}>;
 
-export default function SaveWord({ language }: Props) {
+export default function SaveWord() {
 	const { t } = useTranslation();
 
 	const [refreshing, setRefreshing] = useState(false);
+	const [saving, setSaving] = useState(false);
+    const [newWord, setNewWord] = useState({
+        word: "",
+        transliteration: "",
+        translation: "",
+    });
 
 	const onRefresh = () => {
 		setRefreshing(true);
+        setTimeout(() => {
+			setNewWord({
+                word: "",
+                transliteration: "",
+                translation: "",
+            });
+			setRefreshing(false);
+		}, 1000);
 	};
+
+    const saveWord = async () => {
+        // Build a new object instead of mutating newWord in place: assigning to state
+        // directly skips the re-render, so the trimmed values never reach the inputs.
+        const word = {
+            word: newWord.word.trim(),
+            transliteration: newWord.transliteration.trim(),
+            translation: newWord.translation.trim(),
+        };
+
+        if (word.word.length === 0 || word.translation.length === 0) {
+            Alert.alert(t('The "Word" and "Translation" fields are required.'));
+            return;
+        }
+
+        setSaving(true);
+        try {
+            const { inserted } = await addWord(word);
+
+            if (!inserted) {
+                Alert.alert(t("This word is already in your dictionary."));
+                return;
+            }
+
+            setNewWord({
+                word: "",
+                transliteration: "",
+                translation: "",
+            });
+        } catch (error) {
+            console.error("Failed to save the word", error);
+            Alert.alert(t("Could not save the word. Please try again."));
+        } finally {
+            setSaving(false);
+        }
+    };
 
 	return (
 		<ScrollView
@@ -26,25 +78,67 @@ export default function SaveWord({ language }: Props) {
 				/>
 			}
 		>
-			
+            <ThemedView style={styles.container}>
+                <ThemedText type="semiBold">
+                    {t("Word")}:
+                </ThemedText>
+                <TextInput style={styles.input} value={newWord.word} onChangeText={(text) => setNewWord({...newWord, word: text})} />
+            </ThemedView>
+
+            <ThemedView style={styles.container}>
+                <ThemedText type="semiBold">
+                    {t("Transliteration")}:
+                </ThemedText>
+                <TextInput style={styles.input} value={newWord.transliteration} onChangeText={(text) => setNewWord({...newWord, transliteration: text})} />
+            </ThemedView>
+
+            <ThemedView style={styles.container}>
+                <ThemedText type="semiBold">
+                    {t("Translation")}:
+                </ThemedText>
+                <TextInput style={styles.input} value={newWord.translation} onChangeText={(text) => setNewWord({...newWord, translation: text})} />
+            </ThemedView>
+
+            <Pressable style={styles.buttonContainer} onPress={saveWord} disabled={saving} >
+                <ThemedText type="button">
+                    {t("Save")}
+                </ThemedText>
+            </Pressable>
 		</ScrollView>
 	);
 }
 
 const styles = StyleSheet.create({
-	titleContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: 8,
+	scrollView: {
+		paddingTop: "10%",
+        backgroundColor: Colors.background
+	},
+    container: {
 		paddingTop: 30,
 	},
-	stepContainer: {
-		gap: 8,
-		marginBottom: 8,
-		padding: 10,
+    input: {
+		backgroundColor: "#ffffff",
+		marginLeft: 10,
+		marginRight: 10,
+		paddingLeft: 10,
+		paddingRight: 10,
+		height: 40,
+		borderRadius: 10,
+		shadowColor: "#000",
+		shadowOffset: {
+			width: 0,
+			height: 2,
+		},
+		shadowOpacity: 0.25,
+		shadowRadius: 4,
+		elevation: 5,
+		fontFamily: FONT_FAMILY,
+		fontSize: 18,
 	},
-	scrollView: {
-		paddingTop: 32,
+	buttonContainer: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+        marginTop: 10
 	},
 });

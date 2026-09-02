@@ -100,13 +100,8 @@ const styles = StyleSheet.create({
 	},
 	buttonTextStyle: {
 		color: "white",
-		// fontWeight: 'bold',
 		textAlign: "center",
 		fontSize: 24,
-	},
-	modalText: {
-		marginBottom: 15,
-		textAlign: "center",
 	},
 	radioText: {
 		fontSize: 20,

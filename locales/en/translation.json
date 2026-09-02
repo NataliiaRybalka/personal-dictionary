@@ -1,11 +1,15 @@
 {
-    "Word List" : "Word List",
-    "New word" : "New word",
+    "Word List": "Word List",
+    "New word": "New word",
     "Word": "Word",
     "Transliteration": "Transliteration",
     "Translation": "Translation",
     "Export": "Export",
     "Import": "Import",
     "old": "old",
-    "new": "new"
+    "new": "new",
+    "Save": "Save",
+    "The \"Word\" and \"Translation\" fields are required.": "The \"Word\" and \"Translation\" fields are required.",
+    "This word is already in your dictionary.": "This word is already in your dictionary.",
+    "Could not save the word. Please try again.": "Could not save the word. Please try again."
 }

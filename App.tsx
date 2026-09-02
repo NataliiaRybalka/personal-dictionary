@@ -12,6 +12,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import "react-native-reanimated";
 
 import RootNavigator from "./navigation/RootNavigator";
+import { initDb } from "./db";
 import i18n from "./i18n";
 
 
@@ -21,6 +22,10 @@ export default function App() {
 
 	useEffect(() => {
 		(async () => {
+			// Opens the connection and creates the schema up front. Queries await the
+			// same promise, so a slow start delays them rather than failing them.
+			initDb().catch((error) => console.error("Failed to open the database", error));
+
 			const language = await AsyncStorage.getItem("language");
 			if (language) await i18n.changeLanguage(language);
 		})();
