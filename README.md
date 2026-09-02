@@ -1,57 +1,45 @@
 This is a new Personal Dictionary project.
 
-# Getting Started
+## Technologies Used
 
-## Step 1: Start Metro
+Metaphorical Cards app was built using the following technologies:
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+-   **React Native**: Mobile app framework for Android.
+-	**i18next**: For multiple languages
 
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+## Start Metro
 
 ```sh
-# Using npm
-npm run android
+adb reverse tcp:8081 tcp:8081
 
-# OR using Yarn
-yarn android
+npx react-native start
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+-------------------------------------------
+Reset cache:
 
 ```sh
-bundle install
+cd android
+
+./gradlew clean
+
+cd ..
+
+npx react-native start --reset-cache
 ```
 
-Then, and every time you update your native dependencies, run:
+-------------------------------------------
 
 ```sh
-bundle exec pod install
+npx react-native run-android - in another tab
+
+npx react-native log-android - logs
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+-------------------------------------------
 
-```sh
-# Using npm
-npm run ios
+Before build needs update fields:
 
-# OR using Yarn
-yarn ios
-```
+MYAPP_RELEASE_STORE_PASSWORD and MYAPP_RELEASE_KEY_PASSWORD in
+
+android/gradle.properties
