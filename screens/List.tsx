@@ -1,12 +1,15 @@
-import { useEffect, useState } from "react";
-import { StyleSheet, ScrollView, RefreshControl, useWindowDimensions } from "react-native";
+import { useCallback, useEffect, useState } from "react";
+import { StyleSheet, ScrollView, RefreshControl, useWindowDimensions, TextInput } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { Colors } from "../constants/Colors";
 import { listWords, Word } from "../db/words";
 import { ThemedView } from "../components/ThemedView";
 import { ThemedText } from "../components/ThemedText";
+import { FONT_FAMILY } from "../constants/Fonts";
 
+/** Wait out a short typing pause instead of running one query per keystroke. */
+const SEARCH_DEBOUNCE_MS = 250;
 
 export default function List() {
 	const { t } = useTranslation();
@@ -17,23 +20,37 @@ export default function List() {
 
 	const [refreshing, setRefreshing] = useState(false);
 	const [list, setList] = useState<Word[]>([]);
+	const [search, setSearch] = useState("");
+
+	const term = search.trim();
+
+	const getList = useCallback(
+		async (isStale: () => boolean = () => false) => {
+			try {
+				const rows = await listWords({ search: term });
+				if (!isStale()) setList(rows);
+			} catch (error) {
+				console.error("Failed to load the word list", error);
+			}
+		},
+		[term],
+	);
 
 	useEffect(() => {
-		getList();
-	}, []);
+		let cancelled = false;
+		const timer = setTimeout(() => getList(() => cancelled), term ? SEARCH_DEBOUNCE_MS : 0);
 
-	const getList = async () => {
-		try {
-			setList(await listWords());
-		} catch (error) {
-			console.error("Failed to load the word list", error);
-		}
-	};
+		return () => {
+			cancelled = true;
+			clearTimeout(timer);
+		};
+	}, [term, getList]);
 
 	const onRefresh = async () => {
 		setRefreshing(true);
 		await getList();
 		setRefreshing(false);
+        setSearch("");
 	};
 
 	return (
@@ -47,7 +64,15 @@ export default function List() {
 				/>
 			}
 		>
-			<ThemedView style={styles.topContainer} />
+			<ThemedView style={styles.topContainer}>
+				<TextInput
+					style={styles.input}
+					value={search}
+					onChangeText={setSearch}
+					autoCapitalize="none"
+					autoCorrect={false}
+				/>
+			</ThemedView>
 
 			<ThemedView style={[styles.table]}>
 				<ThemedView style={[styles.row, styles.headerRow]}>
@@ -84,7 +109,28 @@ const styles = StyleSheet.create({
 		paddingTop: 32,
 		paddingBottom: 24,
 	},
-	topContainer: {},
+	topContainer: {
+        paddingTop: 10,
+    },
+    input: {
+        backgroundColor: "#ffffff",
+        marginLeft: 10,
+        marginRight: 10,
+        paddingLeft: 10,
+        paddingRight: 10,
+        height: 40,
+        borderRadius: 10,
+        shadowColor: "#000",
+        shadowOffset: {
+            width: 0,
+            height: 2,
+        },
+        shadowOpacity: 0.25,
+        shadowRadius: 4,
+        elevation: 5,
+        fontFamily: FONT_FAMILY,
+        fontSize: 18,
+    },
 	table: {
 		marginTop: 10,
 		marginBottom: 30,

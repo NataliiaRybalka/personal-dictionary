@@ -34,7 +34,8 @@ export async function initDb(): Promise<void> {
  *
  * `search_text` holds word + transliteration + translation lowercased in JS. SQLite's
  * own LIKE and lower() only fold ASCII case, so searching Cyrillic through them would
- * be case-sensitive.
+ * be case-sensitive. The three parts are newline-joined, which is what lets the prefix
+ * search anchor at the start of any one of them (see prefixPatterns in words.ts).
  */
 async function migrate(): Promise<DB> {
 	if (!db) db = open({ name: DB_NAME });

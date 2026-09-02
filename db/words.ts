@@ -45,9 +45,26 @@ function normalize(input: NewWord): NormalizedWord {
 	};
 }
 
-/** Escapes the LIKE wildcards so a user searching for "%" finds a literal "%". */
-function likePattern(term: string): string {
-	return `%${term.toLowerCase().replace(/[\\%_]/g, "\\$&")}%`;
+/**
+ * Patterns for a *prefix* match: "ар" must not find "бар". search_text is
+ * word + "\n" + transliteration + "\n" + translation, so a field starts either at the
+ * very start of that text or right after one of the newlines — one pattern per position.
+ * The term is lowercased to meet the stored text, and the LIKE wildcards in it are
+ * escaped so a search for "%" finds a literal "%".
+ */
+function prefixPatterns(term: string): string[] {
+	const escaped = term.toLowerCase().replace(/[\\%_]/g, "\\$&");
+
+	return [`${escaped}%`, `%\n${escaped}%`];
+}
+
+const SEARCH_WHERE = "WHERE (search_text LIKE ? ESCAPE '\\' OR search_text LIKE ? ESCAPE '\\')";
+
+/** The shared WHERE for both queries below. An empty term filters nothing out. */
+function searchFilter(search: string): { where: string; params: string[] } {
+	const term = search.trim();
+
+	return term ? { where: SEARCH_WHERE, params: prefixPatterns(term) } : { where: "", params: [] };
 }
 
 const INSERT_WORD = `INSERT OR IGNORE INTO words
@@ -89,30 +106,28 @@ export async function addWords(inputs: NewWord[]): Promise<{ inserted: number; s
 	return { inserted, skipped: inputs.length - inserted };
 }
 
-/** One page of words, newest first by default. Pass search to filter across all three fields. */
+/**
+ * One page of words, oldest first by default. Pass search to keep only the words whose
+ * word, transliteration or translation *starts with* the term.
+ */
 export async function listWords(options: ListOptions = {}): Promise<Word[]> {
 	const { sort = "old", search = "", limit = 50, offset = 0 } = options;
 	const direction = sort === "old" ? "ASC" : "DESC";
-	const term = search.trim();
-
-	const where = term ? "WHERE search_text LIKE ? ESCAPE '\\'" : "";
-	const params = term ? [likePattern(term), limit, offset] : [limit, offset];
+	const { where, params } = searchFilter(search);
 
 	const db = await getDb();
 	const { rows } = await db.execute(
 		`SELECT ${COLUMNS} FROM words ${where}
 			ORDER BY created_at ${direction}, id ${direction}
 			LIMIT ? OFFSET ?`,
-		params,
+		[...params, limit, offset],
 	);
 
 	return rows as Word[];
 }
 
 export async function countWords(search = ""): Promise<number> {
-	const term = search.trim();
-	const where = term ? "WHERE search_text LIKE ? ESCAPE '\\'" : "";
-	const params = term ? [likePattern(term)] : [];
+	const { where, params } = searchFilter(search);
 
 	const db = await getDb();
 	const { rows } = await db.execute(`SELECT COUNT(*) AS total FROM words ${where}`, params);
