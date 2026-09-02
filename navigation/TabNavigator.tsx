@@ -1,34 +1,34 @@
-import React, { useState, useEffect } from 'react';
-import { Platform } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import Feather from 'react-native-vector-icons/Feather';
+import React, { useState, useEffect } from "react";
+import { Platform } from "react-native";
+import { createBottomTabNavigator } from "@react-navigation/bottom-tabs";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Feather from "react-native-vector-icons/Feather";
 
-import { HapticTab } from '../components/HapticTab';
-import TabBarBackground from '../components/ui/TabBarBackground';
-import { Colors } from '../constants/Colors';
-import ModalWindow from '../components/Modal';
-import i18n from '../i18n';
+import { HapticTab } from "../components/HapticTab";
+import TabBarBackground from "../components/ui/TabBarBackground";
+import { Colors } from "../constants/Colors";
+import ModalWindow from "../components/Modal";
+import i18n from "../i18n";
 
-import SaveWord from '../screens/SaveWord';
-import List from '../screens/List';
+import SaveWord from "../screens/SaveWord";
+import List from "../screens/List";
 
 
 const Tab = createBottomTabNavigator();
 
 export default function TabNavigator() {
-	const [language, setLanguage] = useState('');
+	const [language, setLanguage] = useState("");
 	const [modalVisible, setModalVisible] = useState(false);
 
 	const getStorageData = async () => {
-		const value = await AsyncStorage.getItem('language');
+		const value = await AsyncStorage.getItem("language");
 		if (value !== null) {
 			setLanguage(value);
 			i18n.changeLanguage(value);
 		}
 		else {
 			setModalVisible(true);
-			i18n.changeLanguage('en');
+			i18n.changeLanguage("en");
 		}
 	};
 
@@ -41,7 +41,7 @@ export default function TabNavigator() {
 			screenOptions={{
 				tabBarActiveTintColor: Colors.tint,
 				tabBarLabelStyle: {
-                    fontFamily: 'Open Sans',
+                    fontFamily: "Open Sans",
 					fontSize: 14,
 				},
 				headerShown: false,
@@ -49,17 +49,17 @@ export default function TabNavigator() {
 				tabBarBackground: TabBarBackground,
 				tabBarStyle: Platform.select({
 				ios: {
-					position: 'absolute',
+					position: "absolute",
 				},
 				default: {},
 				}),
 			}}
 		>
 			<Tab.Screen
-				name='index'
+				name="index"
 				options={{
-                    title: language === 'ru' ? 'Список слов' : 'Word List',
-                    tabBarIcon: () => <Feather name='list' size={24} color='black' />,
+                    title: language === "ru" ? "Список слов" : "Word List",
+                    tabBarIcon: () => <Feather name="list" size={24} color="black" />,
 				}}
 			>
 				{() => !language
@@ -73,10 +73,10 @@ export default function TabNavigator() {
 				/>}
 			</Tab.Screen>
 			<Tab.Screen
-				name='explore'
+				name="explore"
 				options={{
-					title: language === 'ru' ? 'Новое слово' : 'New word',
-					tabBarIcon: () => <Feather name='edit' size={24} color='black' />,
+					title: language === "ru" ? "Новое слово" : "New word",
+					tabBarIcon: () => <Feather name="edit" size={24} color="black" />,
 				}}
 			>
 				{() => <SaveWord language={language} />}

@@ -1,18 +1,21 @@
-import { Text, type TextProps, StyleSheet } from 'react-native';
+import { Text, type TextProps, StyleSheet } from "react-native";
 
-import { Colors } from '../constants/Colors';
+import { Colors } from "../constants/Colors";
+
+
+const FONT_FAMILY = "Open Sans"
 
 export type ThemedTextProps = TextProps & {
 	lightColor?: string;
 	darkColor?: string;
-	type?: 'default' | 'title' | 'defaultSemiBold' | 'subtitle' | 'link' | 'settings';
+	type?: "default" | "title" | "semiBold";
 };
 
 export function ThemedText({
 	style,
 	lightColor,
 	darkColor,
-	type = 'default',
+	type = "default",
 	...rest
 	}: ThemedTextProps) {
 	const color = Colors.text;
@@ -21,12 +24,9 @@ export function ThemedText({
 		<Text
 		style={[
 			{ color },
-			type === 'default' ? styles.default : undefined,
-			type === 'title' ? styles.title : undefined,
-			type === 'defaultSemiBold' ? styles.defaultSemiBold : undefined,
-			type === 'subtitle' ? styles.subtitle : undefined,
-			type === 'link' ? styles.link : undefined,
-			type === 'settings' ? styles.settings : undefined,
+			type === "default" ? styles.default : undefined,
+			type === "title" ? styles.title : undefined,
+			type === "semiBold" ? styles.semiBold : undefined,
 			style,
 		]}
 		{...rest}
@@ -38,39 +38,22 @@ const styles = StyleSheet.create({
 	default: {
 		fontSize: 18,
 		lineHeight: 24,
-		textAlign: 'justify',
+		textAlign: "justify",
 		paddingLeft: 10,
 		paddingRight: 10,
-		fontFamily: 'Open Sans'
+		fontFamily: FONT_FAMILY,
 	},
-	defaultSemiBold: {
+	semiBold: {
 		fontSize: 18,
 		lineHeight: 24,
-		fontWeight: '600',
+		fontWeight: "600",
 		paddingLeft: 10,
 		paddingRight: 10,
-		fontFamily: 'Open Sans'
+		fontFamily: FONT_FAMILY
 	},
 	title: {
 		fontSize: 34,
 		lineHeight: 32,
-		fontFamily: 'Forum'
-	},
-	subtitle: {
-		fontSize: 20,
-		fontWeight: 'bold',
-		fontFamily: 'Open Sans'
-	},
-	link: {
-		lineHeight: 30,
-		fontSize: 16,
-		color: '#0a7ea4',
-		fontFamily: 'Open Sans'
-	},
-	settings: {
-		fontSize: 24,
-		lineHeight: 24,
-		fontWeight: '600',
-		fontFamily: 'Open Sans'
+		fontFamily: FONT_FAMILY
 	},
 });

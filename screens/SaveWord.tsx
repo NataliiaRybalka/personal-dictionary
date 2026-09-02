@@ -1,6 +1,6 @@
-import { PropsWithChildren, useState } from 'react';
-import { StyleSheet, ScrollView, RefreshControl } from 'react-native';
-import { useTranslation } from 'react-i18next';
+import { PropsWithChildren, useState } from "react";
+import { StyleSheet, ScrollView, RefreshControl } from "react-native";
+import { useTranslation } from "react-i18next";
 
 
 type Props = PropsWithChildren<{
@@ -33,9 +33,9 @@ export default function SaveWord({ language }: Props) {
 
 const styles = StyleSheet.create({
 	titleContainer: {
-		flexDirection: 'row',
-		alignItems: 'center',
-		justifyContent: 'center',
+		flexDirection: "row",
+		alignItems: "center",
+		justifyContent: "center",
 		gap: 8,
 		paddingTop: 30,
 	},

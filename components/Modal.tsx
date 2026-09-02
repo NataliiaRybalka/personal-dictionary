@@ -1,11 +1,11 @@
-import { useState, PropsWithChildren } from 'react';
-import { Modal, Pressable, StyleSheet } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { RadioButton } from 'react-native-paper';
+import { useState, PropsWithChildren } from "react";
+import { Modal, Pressable, StyleSheet } from "react-native";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { RadioButton } from "react-native-paper";
 
-import { ThemedText } from './ThemedText';
-import { ThemedView } from './ThemedView';
-import i18n from '../i18n';
+import { ThemedText } from "./ThemedText";
+import { ThemedView } from "./ThemedView";
+import i18n from "../i18n";
 
 type Props = PropsWithChildren<{
 	modalVisible: boolean;
@@ -18,18 +18,18 @@ export default function ModalWindow({
 	setModalVisible,
 	setLanguage,
 }: Props) {
-	const [chosenLanguage, setChosenLanguage] = useState('ru');
+	const [chosenLanguage, setChosenLanguage] = useState("ru");
 
 	const storeData = async () => {
 		setModalVisible(!modalVisible);
-		await AsyncStorage.setItem('language', chosenLanguage);
+		await AsyncStorage.setItem("language", chosenLanguage);
 		setLanguage(chosenLanguage);
 		i18n.changeLanguage(chosenLanguage);
 	};
 	
 	return (
 		<Modal
-			animationType='slide'
+			animationType="slide"
 			transparent={true}
 			visible={modalVisible}
 			onRequestClose={() => setModalVisible(!modalVisible)}
@@ -41,11 +41,11 @@ export default function ModalWindow({
 							value={chosenLanguage}
 						>
 							<ThemedView style={styles.radioView}>
-								<RadioButton value='ru' color='black' />
+								<RadioButton value="ru" color="black" />
 								<ThemedText style={styles.radioText}>Русский</ThemedText>
 							</ThemedView>
 							<ThemedView style={styles.radioView}>
-								<RadioButton value='en' color='black' />
+								<RadioButton value="en" color="black" />
 								<ThemedText style={styles.radioText}>English</ThemedText>
 							</ThemedView>
 						</RadioButton.Group>
@@ -54,7 +54,7 @@ export default function ModalWindow({
 							style={styles.button}
 							onPress={storeData}
 						>
-							<ThemedText style={styles.buttonTextStyle}>{chosenLanguage === 'ru' ? 'Сохранить' : 'Save'}</ThemedText>
+							<ThemedText style={styles.buttonTextStyle}>{chosenLanguage === "ru" ? "Сохранить" : "Save"}</ThemedText>
 						</Pressable>
 					</ThemedView>
 				</ThemedView>
@@ -65,16 +65,16 @@ export default function ModalWindow({
 const styles = StyleSheet.create({
 	centeredView: {
 		flex: 1,
-		justifyContent: 'center',
-		alignItems: 'center',
+		justifyContent: "center",
+		alignItems: "center",
 	},
 	modalView: {
 		margin: 20,
-		backgroundColor: 'white',
+		backgroundColor: "white",
 		borderRadius: 20,
 		padding: 35,
-		alignItems: 'center',
-		shadowColor: '#000',
+		alignItems: "center",
+		shadowColor: "#000",
 		shadowOffset: {
 			width: 0,
 			height: 2,
@@ -86,10 +86,10 @@ const styles = StyleSheet.create({
 	button: {
 		borderRadius: 20,
 		padding: 10,
-		backgroundColor: '#0a7ea4',
+		backgroundColor: "#0a7ea4",
 		marginTop: 10,
 		width: 200,
-		shadowColor: '#0a7ea4',
+		shadowColor: "#0a7ea4",
 		shadowOffset: {
 			width: 0,
 			height: 2,
@@ -99,20 +99,20 @@ const styles = StyleSheet.create({
 		elevation: 5,
 	},
 	buttonTextStyle: {
-		color: 'white',
+		color: "white",
 		// fontWeight: 'bold',
-		textAlign: 'center',
+		textAlign: "center",
 		fontSize: 24,
 	},
 	modalText: {
 		marginBottom: 15,
-		textAlign: 'center',
+		textAlign: "center",
 	},
 	radioText: {
 		fontSize: 20,
 	},
 	radioView: {
-		flexDirection: 'row',
-		alignItems: 'center',
+		flexDirection: "row",
+		alignItems: "center",
 	},
 });

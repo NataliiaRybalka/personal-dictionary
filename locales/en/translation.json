@@ -1,3 +1,11 @@
 {
-    
+    "Word List" : "Word List",
+    "New word" : "New word",
+    "Word": "Word",
+    "Transliteration": "Transliteration",
+    "Translation": "Translation",
+    "Export": "Export",
+    "Import": "Import",
+    "old": "old",
+    "new": "new"
 }
