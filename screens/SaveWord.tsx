@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { StyleSheet, ScrollView, RefreshControl, TextInput, Pressable, Alert } from "react-native";
+import { StyleSheet, ScrollView, RefreshControl, TextInput, Pressable, Alert, useWindowDimensions } from "react-native";
 import { useTranslation } from "react-i18next";
 
 import { ThemedView } from "../components/ThemedView";
@@ -11,6 +11,10 @@ import { addWord } from "../db/words";
 
 export default function SaveWord() {
 	const { t } = useTranslation();
+    const { width, height } = useWindowDimensions();
+
+	const isLandscape = width > height;
+	const screenWidth = isLandscape ? { width: Math.min(width * 0.94) } : null;
 
 	const [refreshing, setRefreshing] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -33,8 +37,6 @@ export default function SaveWord() {
 	};
 
     const saveWord = async () => {
-        // Build a new object instead of mutating newWord in place: assigning to state
-        // directly skips the re-render, so the trimmed values never reach the inputs.
         const word = {
             word: newWord.word.trim(),
             transliteration: newWord.transliteration.trim(),
@@ -70,7 +72,8 @@ export default function SaveWord() {
 
 	return (
 		<ScrollView
-			style={styles.scrollView}
+			style={[styles.scrollView, screenWidth]}
+            contentContainerStyle={styles.content}
 			refreshControl={
 				<RefreshControl
 					refreshing={refreshing}
@@ -78,7 +81,7 @@ export default function SaveWord() {
 				/>
 			}
 		>
-            <ThemedView style={styles.container}>
+            <ThemedView>
                 <ThemedText type="semiBold">
                     {t("Word")}:
                 </ThemedText>
@@ -87,7 +90,7 @@ export default function SaveWord() {
 
             <ThemedView style={styles.container}>
                 <ThemedText type="semiBold">
-                    {t("Transliteration")}:
+                    {t("Transcription")}:
                 </ThemedText>
                 <TextInput style={styles.input} value={newWord.transliteration} onChangeText={(text) => setNewWord({...newWord, transliteration: text})} />
             </ThemedView>
@@ -110,8 +113,12 @@ export default function SaveWord() {
 
 const styles = StyleSheet.create({
 	scrollView: {
-		paddingTop: "10%",
-        backgroundColor: Colors.background
+        backgroundColor: Colors.background,
+        width: "100%",
+	},
+    content: {
+		paddingTop: 32,
+		paddingBottom: 24,
 	},
     container: {
 		paddingTop: 30,

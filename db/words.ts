@@ -91,7 +91,7 @@ export async function addWords(inputs: NewWord[]): Promise<{ inserted: number; s
 
 /** One page of words, newest first by default. Pass search to filter across all three fields. */
 export async function listWords(options: ListOptions = {}): Promise<Word[]> {
-	const { sort = "new", search = "", limit = 50, offset = 0 } = options;
+	const { sort = "old", search = "", limit = 50, offset = 0 } = options;
 	const direction = sort === "old" ? "ASC" : "DESC";
 	const term = search.trim();
 
