@@ -1,4 +1,9 @@
-This is a new Personal Dictionary project.
+This is a new Personal Dictionary from Nataliia Rybalka project.
+
+You can collect your own dictionary with differect languages.
+
+You don't need internet to use it. Just download and install the [personal-dictionary.apk](https://drive.google.com/file/d/108oQtIxihlGbpQrOp84Qdpy6Xf7jGwFN/view?usp=sharing) file.
+
 
 ## Technologies Used
 
@@ -37,9 +42,3 @@ npx react-native log-android - logs
 ```
 
 -------------------------------------------
-
-Before build needs update fields:
-
-MYAPP_RELEASE_STORE_PASSWORD and MYAPP_RELEASE_KEY_PASSWORD in
-
-android/gradle.properties
