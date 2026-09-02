@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StyleSheet, ScrollView, RefreshControl, useWindowDimensions, TextInput, Pressable, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Share from "react-native-share";
@@ -21,6 +22,12 @@ import type { TabParamList } from "../navigation/types";
 
 const SEARCH_DEBOUNCE_MS = 250;
 
+/**
+ * The Android sw600dp breakpoint — a shortest side of at least 600dp means a tablet rather
+ * than a phone. Measured on the shortest side so turning the device never flips the verdict.
+ */
+const TABLET_MIN_SIDE = 600;
+
 const SORT_STORAGE_KEY = "sort";
 const DEFAULT_SORT: SortOrder = "old";
 
@@ -32,9 +39,18 @@ export default function List() {
 	const { t } = useTranslation();
 	const { width, height } = useWindowDimensions();
 	const navigation = useNavigation<BottomTabNavigationProp<TabParamList>>();
+	const insets = useSafeAreaInsets();
 
 	const isLandscape = width > height;
-	const screenWidth = isLandscape ? { width: Math.min(width * 0.94) } : null;
+	const isTablet = Math.min(width, height) >= TABLET_MIN_SIDE;
+	/** Phone-sized rows read as cramped on a tablet, which has the room for larger text. */
+	const cellText = isTablet ? styles.cellTablet : null;
+	/**
+	 * In landscape the system navigation bar sits on one side of a phone but stays at the
+	 * bottom of a tablet, and which side it takes depends on the way the device was turned.
+	 * The insets already carry all of that, so no orientation or device check is needed.
+	 */
+	const sideInsets = { paddingLeft: insets.left, paddingRight: insets.right };
 
 	const [refreshing, setRefreshing] = useState(false);
 	const [exporting, setExporting] = useState(false);
@@ -207,8 +223,8 @@ export default function List() {
 
 	return (
 		<ScrollView
-			style={[styles.scrollView, screenWidth]}
-			contentContainerStyle={styles.content}
+			style={styles.scrollView}
+			contentContainerStyle={[styles.content, sideInsets]}
 			refreshControl={
 				<RefreshControl
 					refreshing={refreshing}
@@ -245,13 +261,13 @@ export default function List() {
 
 			<ThemedView style={[styles.table]}>
 				<ThemedView style={[styles.row, styles.headerRow]}>
-					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell]}>
+					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, cellText]}>
 						{t("Translation")}
 					</ThemedText>
-					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, styles.middleCell]}>
+					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, styles.middleCell, cellText]}>
 						{t("Transcription")}
 					</ThemedText>
-					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell]}>
+					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, cellText]}>
 						{t("Word")}
 					</ThemedText>
 				</ThemedView>
@@ -262,11 +278,11 @@ export default function List() {
 						style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
 						onLongPress={() => setSelected(word)}
 					>
-						<ThemedText style={styles.cell}>{word.translation}</ThemedText>
-						<ThemedText style={[styles.cell, styles.middleCell]}>
+						<ThemedText style={[styles.cell, cellText]}>{word.translation}</ThemedText>
+						<ThemedText style={[styles.cell, styles.middleCell, cellText]}>
 							{word.transliteration}
 						</ThemedText>
-						<ThemedText style={styles.cell}>{word.word}</ThemedText>
+						<ThemedText style={[styles.cell, cellText]}>{word.word}</ThemedText>
 					</Pressable>
 				))}
 			</ThemedView>
@@ -379,6 +395,15 @@ const styles = StyleSheet.create({
 		paddingLeft: 8,
 		paddingRight: 8,
 	},
+    /** Scaled together so the rows stay proportional, not just taller. */
+    cellTablet: {
+        fontSize: 22,
+        lineHeight: 30,
+        paddingTop: 12,
+        paddingBottom: 12,
+        paddingLeft: 12,
+        paddingRight: 12,
+    },
     headerCell: {
         textAlign: "center",
     },

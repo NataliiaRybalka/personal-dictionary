@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { StyleSheet, ScrollView, RefreshControl, TextInput, Pressable, Alert, useWindowDimensions } from "react-native";
+import { StyleSheet, ScrollView, RefreshControl, TextInput, Pressable, Alert } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { useNavigation, useRoute, type RouteProp } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
@@ -20,12 +21,12 @@ const EMPTY_WORD = {
 
 export default function SaveWord() {
 	const { t } = useTranslation();
-    const { width, height } = useWindowDimensions();
     const route = useRoute<RouteProp<TabParamList, "explore">>();
     const navigation = useNavigation<BottomTabNavigationProp<TabParamList, "explore">>();
+    const insets = useSafeAreaInsets();
 
-	const isLandscape = width > height;
-	const screenWidth = isLandscape ? { width: Math.min(width * 0.94) } : null;
+	/** Keeps the form clear of the system navigation bar — see the note in List. */
+	const sideInsets = { paddingLeft: insets.left, paddingRight: insets.right };
 
 	const [refreshing, setRefreshing] = useState(false);
 	const [saving, setSaving] = useState(false);
@@ -112,8 +113,8 @@ export default function SaveWord() {
 
 	return (
 		<ScrollView
-			style={[styles.scrollView, screenWidth]}
-            contentContainerStyle={styles.content}
+			style={styles.scrollView}
+            contentContainerStyle={[styles.content, sideInsets]}
 			refreshControl={
 				<RefreshControl
 					refreshing={refreshing}
