@@ -1,45 +1,41 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import { NewAppScreen } from '@react-native/new-app-screen';
-import { StatusBar, StyleSheet, useColorScheme, View } from 'react-native';
+import { useEffect } from 'react';
+import { StatusBar } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
-  SafeAreaProvider,
-  useSafeAreaInsets,
-} from 'react-native-safe-area-context';
+	NavigationContainer,
+	DarkTheme,
+	DefaultTheme,
+	createNavigationContainerRef,
+} from '@react-navigation/native';
+import BootSplash from 'react-native-bootsplash';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import 'react-native-reanimated';
 
-function App() {
-  const isDarkMode = useColorScheme() === 'dark';
+import RootNavigator from './navigation/RootNavigator';
+import i18n from './i18n';
 
-  return (
-    <SafeAreaProvider>
-      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <AppContent />
-    </SafeAreaProvider>
-  );
+
+const navigationRef = createNavigationContainerRef();
+
+export default function App() {
+
+	useEffect(() => {
+		(async () => {
+			const language = await AsyncStorage.getItem('language');
+			if (language) await i18n.changeLanguage(language);
+		})();
+	}, []);
+
+	return (
+        <SafeAreaProvider>
+            <StatusBar barStyle='light-content' />
+            <NavigationContainer
+                ref={navigationRef}
+                theme={DefaultTheme}
+                onReady={() => BootSplash.hide({ fade: true })}
+            >
+                <RootNavigator />
+            </NavigationContainer>
+        </SafeAreaProvider>
+	);
 }
-
-function AppContent() {
-  const safeAreaInsets = useSafeAreaInsets();
-
-  return (
-    <View style={styles.container}>
-      <NewAppScreen
-        templateFileName="App.tsx"
-        safeAreaInsets={safeAreaInsets}
-      />
-    </View>
-  );
-}
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-});
-
-export default App;
