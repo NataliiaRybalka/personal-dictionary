@@ -3,14 +3,15 @@ import { StyleSheet, ScrollView, RefreshControl, useWindowDimensions, TextInput,
 import { useTranslation } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Share from "react-native-share";
+import { errorCodes, isErrorWithCode, pick, types } from "@react-native-documents/picker";
 
 import { Colors } from "../constants/Colors";
-import { allWords, listWords, SortOrder, Word } from "../db/words";
+import { addWords, allWords, listWords, SortOrder, Word } from "../db/words";
 import { ThemedView } from "../components/ThemedView";
 import { ThemedText } from "../components/ThemedText";
 import SortSelect from "../components/SortSelect";
 import { FONT_FAMILY } from "../constants/Fonts";
-import { wordsToCsv } from "../utils/csv";
+import { CsvFormatError, csvToWords, wordsToCsv } from "../utils/csv";
 import { utf8ToBase64 } from "../utils/base64";
 
 
@@ -32,6 +33,7 @@ export default function List() {
 
 	const [refreshing, setRefreshing] = useState(false);
 	const [exporting, setExporting] = useState(false);
+	const [importing, setImporting] = useState(false);
 	const [list, setList] = useState<Word[]>([]);
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SortOrder | null>(null);
@@ -114,7 +116,41 @@ export default function List() {
         }
     };
 
-    const importList = async () => {};
+    const importList = async () => {
+        setImporting(true);
+        try {
+            const [file] = await pick({ type: [...types.csv, types.plainText] });
+            const text = await (await fetch(file.uri)).text();
+            const { words, invalid } = csvToWords(text);
+
+            if (words.length === 0) {
+                Alert.alert(t("No words could be read from that file."));
+                return;
+            }
+
+            const { inserted, skipped } = await addWords(words);
+            await getList();
+
+            Alert.alert(
+                t("Imported {{inserted}}, skipped {{skipped}}.", {
+                    inserted,
+                    skipped: skipped + invalid,
+                }),
+            );
+        } catch (error) {
+            if (isErrorWithCode(error) && error.code === errorCodes.OPERATION_CANCELED) return;
+
+            if (error instanceof CsvFormatError) {
+                Alert.alert(t("That file does not look like a dictionary export."));
+                return;
+            }
+
+            console.error("Failed to import the word list", error);
+            Alert.alert(t("Could not import the word list. Please try again."));
+        } finally {
+            setImporting(false);
+        }
+    };
 
 	return (
 		<ScrollView
@@ -147,7 +183,7 @@ export default function List() {
                         <Pressable style={styles.button} onPress={exportList} disabled={exporting}>
                             <ThemedText>{t("Export")}</ThemedText>
                         </Pressable>
-                        <Pressable style={styles.button} onPress={importList}>
+                        <Pressable style={styles.button} onPress={importList} disabled={importing}>
                             <ThemedText>{t("Import")}</ThemedText>
                         </Pressable>
                     </ThemedView>

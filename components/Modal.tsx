@@ -70,7 +70,7 @@ const styles = StyleSheet.create({
 	},
 	modalView: {
 		margin: 20,
-		backgroundColor: "white",
+		backgroundColor: "#ffffff",
 		borderRadius: 20,
 		padding: 35,
 		alignItems: "center",
@@ -86,10 +86,10 @@ const styles = StyleSheet.create({
 	button: {
 		borderRadius: 20,
 		padding: 10,
-		backgroundColor: "#0a7ea4",
+		backgroundColor: "darkgrey",
 		marginTop: 10,
 		width: 200,
-		shadowColor: "#0a7ea4",
+		shadowColor: "darkgrey",
 		shadowOffset: {
 			width: 0,
 			height: 2,
@@ -109,5 +109,6 @@ const styles = StyleSheet.create({
 	radioView: {
 		flexDirection: "row",
 		alignItems: "center",
+		backgroundColor: "transparent",
 	},
 });
