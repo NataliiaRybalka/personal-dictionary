@@ -5,6 +5,8 @@
     "Transcription": "Transcription",
     "Translation": "Translation",
     "Export": "Export",
+    "There is nothing to export yet.": "There is nothing to export yet.",
+    "Could not export the word list. Please try again.": "Could not export the word list. Please try again.",
     "Import": "Import",
     "Sort": "Sort",
     "old": "old",

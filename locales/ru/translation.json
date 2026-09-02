@@ -5,6 +5,8 @@
     "Transcription": "Транскрипция",
     "Translation": "Перевод",
     "Export": "Экспорт",
+    "There is nothing to export yet.": "Пока нечего экспортировать.",
+    "Could not export the word list. Please try again.": "Не удалось экспортировать список слов. Попробуйте снова.",
     "Import": "Импорт",
     "Sort": "Сортировка",
     "old": "старое",

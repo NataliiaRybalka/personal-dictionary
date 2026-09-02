@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useState } from "react";
-import { StyleSheet, ScrollView, RefreshControl, useWindowDimensions, TextInput } from "react-native";
+import { StyleSheet, ScrollView, RefreshControl, useWindowDimensions, TextInput, Pressable, Alert } from "react-native";
 import { useTranslation } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import Share from "react-native-share";
 
 import { Colors } from "../constants/Colors";
-import { listWords, SortOrder, Word } from "../db/words";
+import { allWords, listWords, SortOrder, Word } from "../db/words";
 import { ThemedView } from "../components/ThemedView";
 import { ThemedText } from "../components/ThemedText";
 import SortSelect from "../components/SortSelect";
 import { FONT_FAMILY } from "../constants/Fonts";
+import { wordsToCsv } from "../utils/csv";
+import { utf8ToBase64 } from "../utils/base64";
 
-/** Wait out a short typing pause instead of running one query per keystroke. */
+
 const SEARCH_DEBOUNCE_MS = 250;
 
 const SORT_STORAGE_KEY = "sort";
@@ -28,6 +31,7 @@ export default function List() {
 	const screenWidth = isLandscape ? { width: Math.min(width * 0.94) } : null;
 
 	const [refreshing, setRefreshing] = useState(false);
+	const [exporting, setExporting] = useState(false);
 	const [list, setList] = useState<Word[]>([]);
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SortOrder | null>(null);
@@ -49,7 +53,6 @@ export default function List() {
 
 	const getList = useCallback(
 		async (isStale: () => boolean = () => false) => {
-			// Hold off until the saved order is known, so nothing is shown in the wrong one.
 			if (!sort) return;
 
 			try {
@@ -79,13 +82,39 @@ export default function List() {
         setSearch("");
 	};
 
-	/** Apply the choice right away; remembering it must not hold up the re-query. */
 	const onSortChange = (next: SortOrder) => {
 		setSort(next);
 		AsyncStorage.setItem(SORT_STORAGE_KEY, next).catch((error) =>
 			console.error("Failed to save the sort order", error),
 		);
 	};
+
+    const exportList = async () => {
+        setExporting(true);
+        try {
+            const words = await allWords();
+
+            if (words.length === 0) {
+                Alert.alert(t("There is nothing to export yet."));
+                return;
+            }
+
+            await Share.open({
+                filename: `dictionary-${new Date().toISOString().slice(0, 10)}`,
+                url: `data:text/csv;base64,${utf8ToBase64(wordsToCsv(words))}`,
+                type: "text/csv",
+                useInternalStorage: true,
+                failOnCancel: false,
+            });
+        } catch (error) {
+            console.error("Failed to export the word list", error);
+            Alert.alert(t("Could not export the word list. Please try again."));
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const importList = async () => {};
 
 	return (
 		<ScrollView
@@ -107,8 +136,21 @@ export default function List() {
 					autoCorrect={false}
 				/>
 
-                <ThemedView style={styles.sortRow}>
-                    <SortSelect value={activeSort} onChange={onSortChange} />
+                <ThemedView style={isLandscape && styles.controlsRow}>
+                    <ThemedView style={[styles.sortRow, isLandscape && styles.sortRowLandscape]}>
+                        <SortSelect value={activeSort} onChange={onSortChange} />
+                    </ThemedView>
+
+                    <ThemedView
+                        style={[styles.buttonContainer, isLandscape && styles.buttonContainerLandscape]}
+                    >
+                        <Pressable style={styles.button} onPress={exportList} disabled={exporting}>
+                            <ThemedText>{t("Export")}</ThemedText>
+                        </Pressable>
+                        <Pressable style={styles.button} onPress={importList}>
+                            <ThemedText>{t("Import")}</ThemedText>
+                        </Pressable>
+                    </ThemedView>
                 </ThemedView>
 			</ThemedView>
 
@@ -164,10 +206,46 @@ const styles = StyleSheet.create({
         fontFamily: FONT_FAMILY,
         fontSize: 18,
     },
+    /** Landscape has the width to spare, so the sort and the buttons share one line. */
+    controlsRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        backgroundColor: "transparent",
+    },
     sortRow: {
         alignItems: "flex-end",
         backgroundColor: "transparent",
         margin: 10,
+        marginBottom: 0,
+    },
+    sortRowLandscape: {
+        marginBottom: 10,
+        marginRight: 0,
+    },
+    buttonContainer: {
+        flexDirection: "row",
+        justifyContent: "space-around",
+        margin: 10,
+    },
+    buttonContainerLandscape: {
+        // Take the width left over by the sort so the buttons still spread out.
+        flex: 1,
+    },
+    button: {
+        fontSize: 14,
+        textAlign: "center",
+        backgroundColor: "darkgrey",
+		padding: 5,
+		alignItems: "center",
+		borderRadius: 20,
+		shadowColor: "#000",
+		shadowOffset: {
+			width: 0,
+			height: 2,
+		},
+		shadowOpacity: 0.25,
+		shadowRadius: 4,
+		elevation: 5,
     },
 	table: {
 		marginTop: 10,

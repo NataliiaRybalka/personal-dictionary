@@ -52,7 +52,6 @@ const styles = StyleSheet.create({
 	},
 	button: {
 		fontSize: 22,
-		fontFamily: FONT_FAMILY,
         textAlign: "center",
         backgroundColor: "darkgrey",
 		marginTop: 10,
