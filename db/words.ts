@@ -32,16 +32,31 @@ type NormalizedWord = {
 	searchText: string;
 };
 
+/**
+ * The comparison form of one field: lowercased, so "Cat" and "cat" are the same word,
+ * and every run of whitespace collapsed to one space. The collapse is what keeps a
+ * newline out of a field, which is what lets searchText below join the three fields
+ * with "\n" and still be read back as three.
+ */
+function fold(value: string): string {
+	return value.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+}
+
+/**
+ * A word keeps the case it was typed in. Only search_text is folded, and it is what both
+ * the duplicate guard (a UNIQUE index) and the search go through — so "Cat" is refused
+ * next to "cat", while the list still shows whichever of the two was saved.
+ */
 function normalize(input: NewWord): NormalizedWord {
-	const word = input.word.trim().toLocaleLowerCase();
-	const transliteration = (input.transliteration ?? "").trim().toLocaleLowerCase();
-	const translation = input.translation.trim().toLocaleLowerCase();
+	const word = input.word.trim();
+	const transliteration = (input.transliteration ?? "").trim();
+	const translation = input.translation.trim();
 
 	return {
 		word,
 		transliteration,
 		translation,
-		searchText: `${word}\n${transliteration}\n${translation}`.toLowerCase(),
+		searchText: `${fold(word)}\n${fold(transliteration)}\n${fold(translation)}`,
 	};
 }
 
@@ -49,11 +64,11 @@ function normalize(input: NewWord): NormalizedWord {
  * Patterns for a *prefix* match: "ар" must not find "бар". search_text is
  * word + "\n" + transliteration + "\n" + translation, so a field starts either at the
  * very start of that text or right after one of the newlines — one pattern per position.
- * The term is lowercased to meet the stored text, and the LIKE wildcards in it are
- * escaped so a search for "%" finds a literal "%".
+ * The term goes through the same fold as the stored text, and the LIKE wildcards in it
+ * are escaped so a search for "%" finds a literal "%".
  */
 function prefixPatterns(term: string): string[] {
-	const escaped = term.toLowerCase().replace(/[\\%_]/g, "\\$&");
+	const escaped = fold(term).replace(/[\\%_]/g, "\\$&");
 
 	return [`${escaped}%`, `%\n${escaped}%`];
 }
@@ -72,8 +87,9 @@ const INSERT_WORD = `INSERT OR IGNORE INTO words
 	VALUES (?, ?, ?, ?, ?)`;
 
 /**
- * Adds one word. Returns inserted: false when the exact triple is already stored —
- * the UNIQUE index decides, so no read-then-write race.
+ * Adds one word. Returns inserted: false when the same word is already stored —
+ * the UNIQUE index on search_text decides, so no read-then-write race and no regard
+ * for the case it was typed in.
  */
 export async function addWord(input: NewWord): Promise<{ inserted: boolean; id?: number }> {
 	const value = normalize(input);

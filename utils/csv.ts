@@ -106,9 +106,9 @@ function parseRows(text: string): string[][] {
  * Reads an exported dictionary back. Columns are matched by header *name*, so a file
  * whose columns were reordered still imports, and a missing transliteration is fine.
  *
- * Duplicates are deliberately left in: the UNIQUE index on
- * (word, transliteration, translation) is what skips them, which also catches words
- * repeated inside the file itself.
+ * Duplicates are deliberately left in: the UNIQUE index over the folded
+ * word/transliteration/translation is what skips them, which also catches words repeated
+ * inside the file itself and rows that differ from a stored word only in case.
  */
 export function csvToWords(text: string): CsvImport {
 	const body = text.startsWith(CSV_BOM) ? text.slice(CSV_BOM.length) : text;

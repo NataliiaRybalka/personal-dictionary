@@ -28,14 +28,21 @@ export async function initDb(): Promise<void> {
 }
 
 /**
- * `transliteration` is NOT NULL with a '' default on purpose: SQLite treats NULLs as
- * distinct inside a UNIQUE index, so a nullable column would let duplicates through
- * the dedup guard whenever the transliteration is empty.
+ * `transliteration` is NOT NULL with a '' default on purpose: it keeps every read a
+ * string, so nothing downstream has to handle a null.
  *
- * `search_text` holds word + transliteration + translation lowercased in JS. SQLite's
- * own LIKE and lower() only fold ASCII case, so searching Cyrillic through them would
- * be case-sensitive. The three parts are newline-joined, which is what lets the prefix
- * search anchor at the start of any one of them (see prefixPatterns in words.ts).
+ * `word`, `transliteration` and `translation` hold what the user typed, case and all.
+ * `search_text` holds the same three folded (lowercased, whitespace collapsed) in JS —
+ * SQLite's own LIKE and lower() fold ASCII only, so leaving it to them would make
+ * Cyrillic case-sensitive. That one column carries both jobs:
+ *   - the three parts are newline-joined, which is what lets the prefix search anchor at
+ *     the start of any one of them (see prefixPatterns in words.ts);
+ *   - the UNIQUE index on it is the duplicate guard, so "Cat" cannot join "cat" even
+ *     though the columns above no longer agree on case.
+ *
+ * words_unique, over the three raw columns, was that guard while they were stored
+ * lowercased. It is dropped rather than kept: on a database written by an older build it
+ * would now let a second casing of the same word in.
  */
 async function migrate(): Promise<DB> {
 	if (!db) db = open({ name: DB_NAME });
@@ -54,10 +61,8 @@ async function migrate(): Promise<DB> {
 				created_at INTEGER NOT NULL
 			)`,
 		],
-		[
-			`CREATE UNIQUE INDEX IF NOT EXISTS words_unique
-				ON words (word, transliteration, translation)`,
-		],
+		[`DROP INDEX IF EXISTS words_unique`],
+		[`CREATE UNIQUE INDEX IF NOT EXISTS words_unique_text ON words (search_text)`],
 		[`CREATE INDEX IF NOT EXISTS words_created_at ON words (created_at, id)`],
 	]);
 
