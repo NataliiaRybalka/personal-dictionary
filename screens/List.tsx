@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { StyleSheet, ScrollView, RefreshControl, useWindowDimensions, TextInput, Pressable, Alert } from "react-native";
+import { StyleSheet, FlatList, RefreshControl, useWindowDimensions, TextInput, Pressable, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -21,6 +21,9 @@ import type { TabParamList } from "../navigation/types";
 
 
 const SEARCH_DEBOUNCE_MS = 250;
+
+/** How many words the list starts with, and how many more each scroll to the end adds. */
+const PAGE_SIZE = 50;
 
 /**
  * The Android sw600dp breakpoint — a shortest side of at least 600dp means a tablet rather
@@ -56,6 +59,7 @@ export default function List() {
 	const [exporting, setExporting] = useState(false);
 	const [importing, setImporting] = useState(false);
 	const [list, setList] = useState<Word[]>([]);
+	const [hasMore, setHasMore] = useState(true);
 	const [search, setSearch] = useState("");
 	const [sort, setSort] = useState<SortOrder | null>(null);
 	const [selected, setSelected] = useState<Word | null>(null);
@@ -75,39 +79,75 @@ export default function List() {
 		})();
 	}, []);
 
-	const getList = useCallback(
-		async (isStale: () => boolean = () => false) => {
+	/**
+	 * Which load counts. Every call takes the next number, so a query still in flight when a
+	 * newer one starts — a page asked for just before the term was retyped, a first page
+	 * overtaken by a scroll — is dropped instead of landing on top of a newer list.
+	 */
+	const request = useRef(0);
+	/** Set while a query is out, so one scroll to the end can't stack several of them. */
+	const loading = useRef(false);
+
+	/**
+	 * Loads the first `count` words for the current term and sort. Each load re-reads the
+	 * whole loaded prefix rather than fetching one page and appending it: it is one query
+	 * either way, and it means a word added, edited or deleted in the meantime cannot shift
+	 * the rows past an offset into a gap or a repeat. A full `count` rows back is the signal
+	 * that there is likely more behind them — that is what lets the list ask for one page more.
+	 */
+	const load = useCallback(
+		async (count: number) => {
 			if (!sort) return;
 
+			const id = ++request.current;
+			loading.current = true;
+
 			try {
-				const rows = await listWords({ search: term, sort });
-				if (!isStale()) setList(rows);
+				const rows = await listWords({ search: term, sort, limit: count });
+				if (request.current !== id) return;
+
+				setList(rows);
+				setHasMore(rows.length === count);
 			} catch (error) {
 				console.error("Failed to load the word list", error);
+			} finally {
+				// Only the newest load owns the flag; an overtaken one must not clear it.
+				if (request.current === id) loading.current = false;
 			}
 		},
 		[term, sort],
 	);
 
+	// A new term or sort starts over from one page: whatever was scrolled through belonged
+	// to the previous list.
 	useEffect(() => {
-		let cancelled = false;
-		const timer = setTimeout(() => getList(() => cancelled), term ? SEARCH_DEBOUNCE_MS : 0);
+		const timer = setTimeout(() => load(PAGE_SIZE), term ? SEARCH_DEBOUNCE_MS : 0);
 
-		return () => {
-			cancelled = true;
-			clearTimeout(timer);
-		};
-	}, [term, getList]);
+		return () => clearTimeout(timer);
+	}, [term, load]);
+
+	/** Re-reads exactly what is on screen, so a reload keeps the pages already scrolled through. */
+	const reloadLoaded = () => load(Math.max(PAGE_SIZE, list.length));
+
+	/**
+	 * One page more. An empty list means the first load is still the effect above's job —
+	 * FlatList also calls this once when the content is shorter than the screen.
+	 */
+	const loadMore = () => {
+		if (loading.current || !hasMore || list.length === 0) return;
+
+		load(list.length + PAGE_SIZE);
+	};
 
 	// The other tab saves words into the same table while this screen stays mounted, so an
 	// edit or a new word would otherwise only show up after a pull-to-refresh. Held in a ref
-	// rather than listed as a dependency: getList is rebuilt on every debounced search term,
-	// and a focus effect keyed on it would fire an extra undebounced query per keystroke.
-	const reload = useRef(getList);
+	// rather than listed as a dependency: it is rebuilt on every debounced search term and
+	// on every loaded page, and a focus effect keyed on it would fire an extra query for each.
+	const reload = useRef(reloadLoaded);
 
 	useEffect(() => {
-		reload.current = getList;
-	}, [getList]);
+		reload.current = reloadLoaded;
+	});
 
 	useFocusEffect(
 		useCallback(() => {
@@ -117,7 +157,7 @@ export default function List() {
 
 	const onRefresh = async () => {
 		setRefreshing(true);
-		await getList();
+		await load(PAGE_SIZE);
 		setRefreshing(false);
         setSearch("");
 	};
@@ -132,7 +172,7 @@ export default function List() {
 	const removeWord = async (id: number) => {
 		try {
 			await deleteWord(id);
-			await getList();
+			await reloadLoaded();
 		} catch (error) {
 			console.error("Failed to delete the word", error);
 			Alert.alert(t("Could not delete the word. Please try again."));
@@ -198,7 +238,7 @@ export default function List() {
             }
 
             const { inserted, skipped } = await addWords(words);
-            await getList();
+            await reloadLoaded();
 
             Alert.alert(
                 t("Imported {{inserted}}, skipped {{skipped}}.", {
@@ -222,70 +262,77 @@ export default function List() {
     };
 
 	return (
-		<ScrollView
-			style={styles.scrollView}
-			contentContainerStyle={[styles.content, sideInsets]}
-			refreshControl={
-				<RefreshControl
-					refreshing={refreshing}
-					onRefresh={onRefresh}
-				/>
-			}
-		>
-			<ThemedView style={{ paddingTop: isLandscape ? 10 : 20 }}>
-				<TextInput
-					style={styles.input}
-					value={search}
-					onChangeText={setSearch}
-					autoCapitalize="none"
-					autoCorrect={false}
-				/>
-
-                <ThemedView style={isLandscape && styles.controlsRow}>
-                    <ThemedView style={[styles.sortRow, isLandscape && styles.sortRowLandscape]}>
-                        <SortSelect value={activeSort} onChange={onSortChange} />
-                    </ThemedView>
-
-                    <ThemedView
-                        style={[styles.buttonContainer, isLandscape && styles.buttonContainerLandscape]}
-                    >
-                        <Pressable style={styles.button} onPress={exportList} disabled={exporting}>
-                            <ThemedText>{t("Export")}</ThemedText>
-                        </Pressable>
-                        <Pressable style={styles.button} onPress={importList} disabled={importing}>
-                            <ThemedText>{t("Import")}</ThemedText>
-                        </Pressable>
-                    </ThemedView>
-                </ThemedView>
-			</ThemedView>
-
-			<ThemedView style={[styles.table]}>
-				<ThemedView style={[styles.row, styles.headerRow]}>
-					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, cellText]}>
-						{t("Translation")}
-					</ThemedText>
-					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, styles.middleCell, cellText]}>
-						{t("Transcription")}
-					</ThemedText>
-					<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, cellText]}>
-						{t("Word")}
-					</ThemedText>
-				</ThemedView>
-
-				{list.map((word) => (
+		<ThemedView style={styles.screen}>
+			{/* A FlatList, not a ScrollView: only the rows near the viewport are mounted, so a
+                dictionary of thousands stays scrollable, and reaching the end pulls the next
+			    page in. The search, the controls and the table head ride along as its header. */}
+			<FlatList
+				style={styles.list}
+				contentContainerStyle={[styles.content, sideInsets]}
+				data={list}
+				keyExtractor={(word) => String(word.id)}
+				renderItem={({ item }) => (
 					<Pressable
-						key={word.id}
 						style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-						onLongPress={() => setSelected(word)}
+						onLongPress={() => setSelected(item)}
 					>
-						<ThemedText style={[styles.cell, cellText]}>{word.translation}</ThemedText>
+						<ThemedText style={[styles.cell, cellText]}>{item.translation}</ThemedText>
 						<ThemedText style={[styles.cell, styles.middleCell, cellText]}>
-							{word.transliteration}
+							{item.transliteration}
 						</ThemedText>
-						<ThemedText style={[styles.cell, cellText]}>{word.word}</ThemedText>
+						<ThemedText style={[styles.cell, cellText]}>{item.word}</ThemedText>
 					</Pressable>
-				))}
-			</ThemedView>
+				)}
+				ListHeaderComponent={
+					<>
+						<ThemedView style={{ paddingTop: isLandscape ? 10 : 20 }}>
+							<TextInput
+								style={styles.input}
+								value={search}
+								onChangeText={setSearch}
+								autoCapitalize="none"
+								autoCorrect={false}
+							/>
+
+							<ThemedView style={isLandscape && styles.controlsRow}>
+								<ThemedView style={[styles.sortRow, isLandscape && styles.sortRowLandscape]}>
+									<SortSelect value={activeSort} onChange={onSortChange} />
+								</ThemedView>
+
+								<ThemedView
+									style={[styles.buttonContainer, isLandscape && styles.buttonContainerLandscape]}
+								>
+									<Pressable style={styles.button} onPress={exportList} disabled={exporting}>
+										<ThemedText>{t("Export")}</ThemedText>
+									</Pressable>
+									<Pressable style={styles.button} onPress={importList} disabled={importing}>
+										<ThemedText>{t("Import")}</ThemedText>
+									</Pressable>
+								</ThemedView>
+							</ThemedView>
+						</ThemedView>
+
+						<ThemedView style={[styles.row, styles.headerRow]}>
+							<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, cellText]}>
+								{t("Translation")}
+							</ThemedText>
+							<ThemedText
+								type="semiBold"
+								style={[styles.cell, styles.headerCell, styles.middleCell, cellText]}
+							>
+								{t("Transcription")}
+							</ThemedText>
+							<ThemedText type="semiBold" style={[styles.cell, styles.headerCell, cellText]}>
+								{t("Word")}
+							</ThemedText>
+						</ThemedView>
+					</>
+				}
+				ListFooterComponent={<ThemedView style={styles.tableEnd} />}
+				onEndReached={loadMore}
+				onEndReachedThreshold={0.5}
+				refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+			/>
 
 			<WordActions
 				word={selected}
@@ -293,13 +340,16 @@ export default function List() {
 				onEdit={onEdit}
 				onClose={() => setSelected(null)}
 			/>
-		</ScrollView>
+		</ThemedView>
 	);
 }
 
 const styles = StyleSheet.create({
-	scrollView: {
-		backgroundColor: Colors.background,
+	screen: {
+		flex: 1,
+	},
+	list: {
+		flex: 1,
 	},
     content: {
 		paddingTop: 32,
@@ -363,16 +413,16 @@ const styles = StyleSheet.create({
 		shadowRadius: 4,
 		elevation: 5,
     },
-	table: {
-		marginTop: 10,
-		marginBottom: 30,
-		backgroundColor: "#ffffff",
-		overflow: "hidden",
+	/** Closes the table off at the bottom, where the old wrapper's margin did. */
+	tableEnd: {
+		height: 30,
 	},
 	row: {
 		flexDirection: "row",
 		alignItems: "stretch",
-		backgroundColor: "transparent",
+		// The table's white background: every row is a list cell of its own now, rather than
+		// a child of one wrapper that carried it.
+		backgroundColor: "#ffffff",
 		borderBottomWidth: StyleSheet.hairlineWidth,
 		borderBottomColor: "#c0c4c8",
 	},
@@ -381,6 +431,8 @@ const styles = StyleSheet.create({
 		backgroundColor: "#eceff1",
 	},
 	headerRow: {
+		// The gap under the controls that the old table wrapper's top margin left.
+		marginTop: 10,
 		backgroundColor: "#cfd4d8",
 		borderBottomWidth: 1,
 		borderBottomColor: Colors.icon,
